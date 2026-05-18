@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Performance · Instituto Continental</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#cd001a;
+  --primary-dk:#a30015;
+  --primary-lt:#fef2f4;
+  --bg:#f0f2f5;
+  --surface:#fff;
+  --text:#111827;
+  --muted:#6b7280;
+  --light:#9ca3af;
+  --border:#e5e7eb;
+  --amber:#f59e0b;
+  --green:#16a34a;
+  --blue:#2563eb;
+  --radius:16px;
+  --shadow:0 2px 10px rgba(0,0,0,0.07);
+  --shadow-md:0 4px 20px rgba(0,0,0,0.1);
+  --font:'Plus Jakarta Sans',sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ─── HEADER ─── */
+.header{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:0 32px;
+  height:68px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-text h1{font-size:17px;font-weight:800;letter-spacing:-0.3px;line-height:1.2}
+.brand-text p{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.hdate{font-size:12.5px;color:var(--muted);font-weight:600}
+.badge-live{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:20px;
+  background:var(--primary-lt);color:var(--primary);
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;
+}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--primary);
+  animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ─── DATA SOURCE BAR ─── */
+.dsbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:12px 32px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.ds-label{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+.ds-input{
+  flex:1;min-width:280px;max-width:560px;
+  height:38px;padding:0 14px;
+  border:1.5px solid var(--border);border-radius:8px;
+  font-family:var(--font);font-size:12.5px;color:var(--text);
+  background:#fafafa;outline:none;transition:border-color .2s,background .2s;
+}
+.ds-input:focus{border-color:var(--primary);background:#fff}
+.ds-input::placeholder{color:var(--light)}
+.btn{
+  height:38px;padding:0 18px;border:none;border-radius:8px;
+  font-family:var(--font);font-size:12.5px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;gap:7px;
+  transition:all .18s;white-space:nowrap;
+}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dk);transform:translateY(-1px);box-shadow:0 4px 12px rgba(205,0,26,.3)}
+.btn-primary:active{transform:translateY(0)}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+.status-wrap{display:flex;align-items:center;gap:6px;margin-left:auto}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--light);transition:background .3s}
+.sdot.ok{background:var(--green)}
+.sdot.err{background:var(--primary)}
+.sdot.loading{background:var(--amber);animation:pulse 1s infinite}
+.stext{font-size:11.5px;color:var(--muted);font-weight:500}
+
+/* ─── MAIN ─── */
+.main{padding:28px 32px;max-width:1640px;margin:0 auto}
+
+/* ─── KPI CARDS ─── */
+.kpi-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:22px;
+}
+.kpi-card{
+  background:var(--surface);border-radius:var(--radius);
+  padding:22px 24px;box-shadow:var(--shadow);border:1px solid var(--border);
+  cursor:default;transition:box-shadow .2s,transform .2s;
+  animation:fadeUp .5s ease both;
+}
+.kpi-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.kpi-card:nth-child(1){animation-delay:.05s}
+.kpi-card:nth-child(2){animation-delay:.1s}
+.kpi-card:nth-child(3){animation-delay:.15s}
+.kpi-card:nth-child(4){animation-delay:.2s}
+.kpi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.kpi-label{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.kpi-icon{
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.kpi-value{font-size:40px;font-weight:800;line-height:1;letter-spacing:-2px;color:var(--text)}
+.kpi-sub{font-size:12px;color:var(--light);font-weight:500;margin-top:6px}
+.kpi-progress{height:3px;background:var(--border);border-radius:2px;margin-top:14px;overflow:hidden}
+.kpi-fill{height:100%;border-radius:2px;transition:width .9s cubic-bezier(.34,1.56,.64,1)}
+
+/* ─── CHARTS ─── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.chart-card{
+  background:var(--surface);border-radius:var(--radius);
+  padding:22px 24px;box-shadow:var(--shadow);border:1px solid var(--border);
+  animation:fadeUp .5s ease both;
+}
+.chart-card.full{grid-column:1/-1}
+.chart-card:nth-child(1){animation-delay:.25s}
+.chart-card:nth-child(2){animation-delay:.3s}
+.chart-card:nth-child(3){animation-delay:.35s}
+.chart-card:nth-child(4){animation-delay:.4s}
+.ch-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+.ch-title{font-size:14.5px;font-weight:800;color:var(--text);line-height:1.3}
+.ch-sub{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:3px}
+.ch-badge{
+  padding:4px 11px;border-radius:20px;
+  font-size:10.5px;font-weight:800;letter-spacing:.4px;
+  white-space:nowrap;flex-shrink:0;margin-left:10px;
+}
+.badge-red{background:var(--primary-lt);color:var(--primary)}
+.badge-blue{background:#eff6ff;color:var(--blue)}
+.badge-amber{background:#fffbeb;color:var(--amber)}
+.badge-green{background:#f0fdf4;color:var(--green)}
+.ch-wrap{position:relative}
+
+/* Three-column row */
+.row3{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.row3 .chart-card{animation:none}
+
+/* Section divider */
+.section-label{
+  font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.8px;
+  text-transform:uppercase;margin-bottom:14px;
+  display:flex;align-items:center;gap:10px;
+  grid-column:1/-1;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* Animations */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Empty state */
+.empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:180px;color:var(--light);gap:8px;
+}
+.empty svg{opacity:.35}
+.empty p{font-size:13px;font-weight:600}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  padding:12px 20px;border-radius:10px;
+  background:#1e293b;color:#fff;font-size:13px;font-weight:600;
+  box-shadow:0 8px 24px rgba(0,0,0,.25);
+  opacity:0;transform:translateY(12px);
+  transition:opacity .3s,transform .3s;pointer-events:none;
+}
+#toast.show{opacity:1;transform:translateY(0)}
+#toast.error{background:var(--primary)}
+#toast.success{background:var(--green)}
+
+/* Responsive */
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .charts-grid{grid-template-columns:1fr}
+  .row3{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .main{padding:16px}
+  .header{padding:0 16px}
+  .dsbar{padding:10px 16px}
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:12px}
+  .kpi-value{font-size:32px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="brand">
+    <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M38 7C23 7 10 14 10 24C10 34 23 41 38 41" stroke="#cd001a" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+      <path d="M34 13C22 13 16 18 16 24C16 30 22 35 34 35" stroke="#cd001a" stroke-width="5" stroke-linecap="round" fill="none"/>
+      <path d="M30 19C23.5 19 22 21.5 22 24C22 26.5 23.5 29 30 29" stroke="#cd001a" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    </svg>
+    <div class="brand-text">
+      <h1>Dashboard Performance Bidireccional</h1>
+      <p>Instituto & Escuela Superior Continental</p>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="badge-live"><span class="live-dot"></span>En vivo</div>
+    <div class="hdate" id="headerDate"></div>
+  </div>
+</header>
+
+<!-- DATA SOURCE BAR -->
+<div class="dsbar">
+  <span class="ds-label">🔗 Google Sheet:</span>
+  <input class="ds-input" id="sheetUrl" type="text"
+    placeholder="Pega la URL de tu Google Sheets aquí...">
+  <button class="btn btn-primary" onclick="connectSheet()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+    Actualizar Datos
+  </button>
+  <button class="btn btn-ghost" onclick="loadDemoData()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    Datos Actuales
+  </button>
+  <div class="status-wrap">
+    <div class="sdot" id="sdot"></div>
+    <span class="stext" id="stext">Sin conectar</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">Transferencias CGO</span>
+        <div class="kpi-icon" style="background:var(--primary-lt)">📤</div>
+      </div>
+      <div class="kpi-value" id="kv1">—</div>
+      <div class="kpi-sub" id="ks1">leads transferidos al equipo CGO</div>
+      <div class="kpi-progress"><div class="kpi-fill" id="kf1" style="width:0%;background:var(--primary)"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">Amarillos</span>
+        <div class="kpi-icon" style="background:#fffbeb">🟡</div>
+      </div>
+      <div class="kpi-value" id="kv2">—</div>
+      <div class="kpi-sub" id="ks2">leads en seguimiento activo</div>
+      <div class="kpi-progress"><div class="kpi-fill" id="kf2" style="width:0%;background:var(--amber)"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">Promedio Diario</span>
+        <div class="kpi-icon" style="background:#f0fdf4">📅</div>
+      </div>
+      <div class="kpi-value" id="kv3">—</div>
+      <div class="kpi-sub" id="ks3">transferencias por día hábil</div>
+      <div class="kpi-progress"><div class="kpi-fill" id="kf3" style="width:0%;background:var(--green)"></div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">Nueva Carreras</span>
+        <div class="kpi-icon" style="background:#eff6ff">🆕</div>
+      </div>
+      <div class="kpi-value" id="kv4">—</div>
+      <div class="kpi-sub" id="ks4">solicitudes carrera nueva</div>
+      <div class="kpi-progress"><div class="kpi-fill" id="kf4" style="width:0%;background:var(--blue)"></div></div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-grid">
+
+    <!-- Full: Bidireccional performance -->
+    <div class="chart-card full">
+      <div class="ch-header">
+        <div>
+          <div class="ch-title">Rendimiento por Asesor Bidireccional</div>
+          <div class="ch-sub">Transferencias vs Amarillos por asesor · comparativo de volumen</div>
+        </div>
+        <span class="ch-badge badge-red">BIDIRECCIONAL</span>
+      </div>
+      <div class="ch-wrap" style="height:200px">
+        <canvas id="cBidireccional"></canvas>
+      </div>
+    </div>
+
+    <!-- Top Carreras -->
+    <div class="chart-card">
+      <div class="ch-header">
+        <div>
+          <div class="ch-title">Carreras Más Consultadas</div>
+          <div class="ch-sub">Top 8 · Hoja Transferencias</div>
+        </div>
+        <span class="ch-badge badge-red">TOP 8</span>
+      </div>
+      <div class="ch-wrap" style="height:290px">
+        <canvas id="cCarreras"></canvas>
+      </div>
+    </div>
+
+    <!-- Top CGO -->
+    <div class="chart-card">
+      <div class="ch-header">
+        <div>
+          <div class="ch-title">Top Asesores CGO</div>
+          <div class="ch-sub">Por volumen de transferencias recibidas</div>
+        </div>
+        <span class="ch-badge badge-blue">CGO</span>
+      </div>
+      <div class="ch-wrap" style="height:290px">
+        <canvas id="cCGO"></canvas>
+      </div>
+    </div>
+
+    <!-- Row 3: Donuts -->
+    <div class="row3">
+      <div class="chart-card">
+        <div class="ch-header">
+          <div>
+            <div class="ch-title">Modalidad de Estudio</div>
+            <div class="ch-sub">Distribución de preferencias</div>
+          </div>
+          <span class="ch-badge badge-amber">MODALIDAD</span>
+        </div>
+        <div class="ch-wrap" style="height:210px">
+          <canvas id="cModalidad"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="ch-header">
+          <div>
+            <div class="ch-title">Etiquetas de Ventas</div>
+            <div class="ch-sub">Clasificación por estado de gestión</div>
+          </div>
+          <span class="ch-badge badge-red">ETIQUETAS</span>
+        </div>
+        <div class="ch-wrap" style="height:210px">
+          <canvas id="cEtiquetas"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="ch-header">
+          <div>
+            <div class="ch-title">Unidad Académica</div>
+            <div class="ch-sub">Instituto vs Escuela Superior</div>
+          </div>
+          <span class="ch-badge badge-green">UNIDAD</span>
+        </div>
+        <div class="ch-wrap" style="height:210px">
+          <canvas id="cUnidad"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   DEMO DATA (datos reales del Excel subido)
+═══════════════════════════════════════════ */
+const DEMO = {
+  totalTransferencias: 103,
+  totalAmarillos: 45,
+  totalNuevas: 1,
+  promedioDiario: 25.8,
+  diasConRegistro: 4,
+
+  bidireccional: {
+    labels: ['TATIANA', 'SARITA'],
+    transferencias: [47, 39],
+    amarillos: [18, 19],
+  },
+
+  carreras: {
+    labels: [
+      'Administración de Empresas',
+      'Gastronomía',
+      'Ciencia de Datos e IA',
+      'Desarrollo de Sistemas',
+      'Marketing',
+      'Contabilidad',
+      'Adm. Negocios Bancarios',
+      'Diseño Gráfico'
+    ],
+    data: [19, 13, 8, 8, 7, 7, 5, 4]
+  },
+
+  cgo: {
+    labels: [
+      'Payano Nateros Rosa M.',
+      'Gomez Olivera Diego R.',
+      'Espinoza Atoc Jean C.',
+      'Romani Montes Diego C.',
+      'Camarena Rivas Luz V.',
+      'Luis Proa Sergio S.',
+      'Santiago Romero Brandy A.',
+      'Castro Hinostroza Jhudit L.'
+    ],
+    data: [19, 15, 13, 13, 13, 12, 10, 8]
+  },
+
+  modalidad: {
+    labels: ['Distancia', 'Presencial', 'Semipresencial'],
+    data: [66, 15, 4]
+  },
+
+  etiquetas: {
+    labels: ['En Progreso', 'Sin Contacto (IT)', 'No Útil', 'Negativo Recuperable', 'Positivo', 'Sin Etiqueta'],
+    data: [33, 11, 2, 2, 2, 53]
+  },
+
+  unidad: {
+    labels: ['Instituto', 'Escuela Superior'],
+    data: [82, 21]
+  }
+};
+
+/* ═══════════════════════════════════════════
+   CHART INSTANCES
+═══════════════════════════════════════════ */
+const charts = {};
+const PRIMARY = '#cd001a';
+const PALETTE = ['#cd001a','#1e3a8a','#f59e0b','#16a34a','#7c3aed','#0891b2','#ea580c','#4f46e5'];
+const DONUT_ETIQ = ['#f59e0b','#94a3b8','#ef4444','#cd001a','#16a34a','#e2e8f0'];
+const DONUT_MOD = ['#cd001a','#f59e0b','#16a34a'];
+const DONUT_UNIDAD = ['#cd001a','#1e3a8a'];
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+const CHART_DEFAULTS = {
+  font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+  color: '#6b7280'
+};
+
+Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+Chart.defaults.color = '#6b7280';
+
+/* ═══════════════════════════════════════════
+   RENDER DASHBOARD
+═══════════════════════════════════════════ */
+function renderDashboard(d) {
+  // KPI Cards
+  animateKPI('kv1', d.totalTransferencias, 100);
+  animateKPI('kv2', d.totalAmarillos, 100);
+  animateKPI('kv3', d.promedioDiario, 100, 1);
+  animateKPI('kv4', d.totalNuevas, 100);
+
+  setTimeout(() => {
+    document.getElementById('kf1').style.width = '100%';
+    document.getElementById('kf2').style.width = Math.min((d.totalAmarillos/d.totalTransferencias)*100,100)+'%';
+    document.getElementById('kf3').style.width = Math.min((d.promedioDiario/50)*100,100)+'%';
+    document.getElementById('kf4').style.width = Math.min((d.totalNuevas/10)*100,100)+'%';
+  }, 200);
+
+  document.getElementById('ks1').textContent = `${d.totalTransferencias} leads transferidos al equipo CGO`;
+  document.getElementById('ks2').textContent = `${d.totalAmarillos} leads en seguimiento activo`;
+  document.getElementById('ks3').textContent = `basado en ${d.diasConRegistro} días con registros`;
+  document.getElementById('ks4').textContent = `${d.totalNuevas} solicitud nueva carrera`;
+
+  // Charts
+  renderBidireccional(d.bidireccional);
+  renderCarreras(d.carreras);
+  renderCGO(d.cgo);
+  renderModalidad(d.modalidad);
+  renderEtiquetas(d.etiquetas);
+  renderUnidad(d.unidad);
+}
+
+function animateKPI(id, target, duration, decimals = 0) {
+  const el = document.getElementById(id);
+  const start = 0;
+  const startTime = performance.now();
+  const ease = t => t < .5 ? 2*t*t : -1+(4-2*t)*t;
+  function step(now) {
+    const progress = Math.min((now - startTime) / (duration * 10), 1);
+    const value = start + (target - start) * ease(progress);
+    el.textContent = decimals ? value.toFixed(decimals) : Math.round(value).toLocaleString();
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ─── BIDIRECCIONAL (grouped bar) ─── */
+function renderBidireccional(data) {
+  destroyChart('bidireccional');
+  const ctx = document.getElementById('cBidireccional').getContext('2d');
+  charts.bidireccional = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [
+        {
+          label: 'Transferencias CGO',
+          data: data.transferencias,
+          backgroundColor: PRIMARY,
+          borderRadius: 6,
+          borderSkipped: false,
+        },
+        {
+          label: 'Amarillos',
+          data: data.amarillos,
+          backgroundColor: '#f59e0b',
+          borderRadius: 6,
+          borderSkipped: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, weight: '600' } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} leads` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 13, weight: '700' } } },
+        y: {
+          beginAtZero: true,
+          grid: { color: '#f1f5f9' },
+          ticks: { stepSize: 10, font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+/* ─── CARRERAS (horizontal bar) ─── */
+function renderCarreras(data) {
+  destroyChart('carreras');
+  const ctx = document.getElementById('cCarreras').getContext('2d');
+  charts.carreras = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: 'Consultas',
+        data: data.data,
+        backgroundColor: data.data.map((v,i) => i === 0 ? PRIMARY : `rgba(205,0,26,${0.75 - i*0.07})`),
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} consultas` } }
+      },
+      scales: {
+        x: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' } } }
+      }
+    }
+  });
+}
+
+/* ─── TOP CGO (horizontal bar) ─── */
+function renderCGO(data) {
+  destroyChart('cgo');
+  const ctx = document.getElementById('cCGO').getContext('2d');
+  charts.cgo = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: 'Transferencias',
+        data: data.data,
+        backgroundColor: data.data.map((v,i) => i === 0 ? '#1e3a8a' : `rgba(30,58,138,${0.75 - i*0.07})`),
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} transferencias` } }
+      },
+      scales: {
+        x: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' } } }
+      }
+    }
+  });
+}
+
+/* ─── MODALIDAD (doughnut) ─── */
+function renderModalidad(data) {
+  destroyChart('modalidad');
+  const ctx = document.getElementById('cModalidad').getContext('2d');
+  charts.modalidad = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.labels,
+      datasets: [{ data: data.data, backgroundColor: DONUT_MOD, hoverOffset: 6, borderWidth: 3, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 12, weight: '600' } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} leads` } }
+      }
+    }
+  });
+}
+
+/* ─── ETIQUETAS (doughnut) ─── */
+function renderEtiquetas(data) {
+  destroyChart('etiquetas');
+  const ctx = document.getElementById('cEtiquetas').getContext('2d');
+  charts.etiquetas = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.labels,
+      datasets: [{ data: data.data, backgroundColor: DONUT_ETIQ, hoverOffset: 6, borderWidth: 3, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 10, font: { size: 11, weight: '600' } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } }
+      }
+    }
+  });
+}
+
+/* ─── UNIDAD (doughnut) ─── */
+function renderUnidad(data) {
+  destroyChart('unidad');
+  const ctx = document.getElementById('cUnidad').getContext('2d');
+  charts.unidad = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.labels,
+      datasets: [{ data: data.data, backgroundColor: DONUT_UNIDAD, hoverOffset: 6, borderWidth: 3, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 12, weight: '600' } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} leads` } }
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   GOOGLE SHEETS CONNECTION
+═══════════════════════════════════════════ */
+function extractSheetId(url) {
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+
+function buildCsvUrl(sheetId, sheetName) {
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+}
+
+function parseSheetCsv(csv) {
+  const result = Papa.parse(csv, { header: false, skipEmptyLines: true });
+  const rows = result.data;
+  if (rows.length < 2) return [];
+
+  // Detect header row (skip title row if present)
+  let headerIdx = 0;
+  if (!rows[0].some(c => c === 'Fecha' || c === 'ASESOR BIDIRECCIONAL')) {
+    headerIdx = 1;
+  }
+
+  const headers = rows[headerIdx].map(h => h ? h.trim() : '');
+  return rows.slice(headerIdx + 1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { if (h) obj[h] = (row[i] || '').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+function processFromRawData(raw) {
+  const tr = raw.transferencias;
+  const am = raw.amarillos;
+  const nc = raw.nuevaCarreras;
+
+  // Counts by asesor bidireccional
+  const asesorTr = countBy(tr, 'ASESOR BIDIRECCIONAL');
+  const asesorAm = countBy(am, 'ASESOR BIDIRECCIONAL');
+  const allAsesores = [...new Set([...Object.keys(asesorTr), ...Object.keys(asesorAm)])].filter(a => a);
+
+  // Carreras
+  const carreraCount = countBy(tr, 'CARRERA ');
+  const topCarreras = topN(carreraCount, 8);
+
+  // CGO
+  const cgoCount = countBy(tr, 'ASESOR CGO');
+  const topCGO = topN(cgoCount, 8);
+
+  // Modalidad
+  const modalidadCount = countBy(tr, 'MODALIDAD ');
+
+  // Etiquetas
+  const etiqRaw = countBy(tr, 'ETIQUETA VENTAS');
+  const etiqCat = {};
+  Object.entries(etiqRaw).forEach(([label, count]) => {
+    const cat = categorizarEtiqueta(label);
+    etiqCat[cat] = (etiqCat[cat] || 0) + count;
+  });
+
+  // Unidad
+  const unidadCount = countBy(tr, 'UNIDAD');
+
+  // Promedio diario
+  const fechas = tr.map(r => r['Fecha']).filter(f => f && f.length > 4);
+  const uniqueDays = new Set(fechas.map(f => f.split('T')[0].split(' ')[0])).size || 4;
+  const total = tr.length;
+
+  return {
+    totalTransferencias: total,
+    totalAmarillos: am.length,
+    totalNuevas: nc.length,
+    promedioDiario: uniqueDays > 0 ? parseFloat((total / uniqueDays).toFixed(1)) : total,
+    diasConRegistro: uniqueDays,
+
+    bidireccional: {
+      labels: allAsesores,
+      transferencias: allAsesores.map(a => asesorTr[a] || 0),
+      amarillos: allAsesores.map(a => asesorAm[a] || 0),
+    },
+
+    carreras: {
+      labels: topCarreras.map(([k]) => k.trim()),
+      data: topCarreras.map(([,v]) => v)
+    },
+
+    cgo: {
+      labels: topCGO.map(([k]) => k.trim()),
+      data: topCGO.map(([,v]) => v)
+    },
+
+    modalidad: {
+      labels: Object.keys(modalidadCount),
+      data: Object.values(modalidadCount)
+    },
+
+    etiquetas: {
+      labels: Object.keys(etiqCat),
+      data: Object.values(etiqCat)
+    },
+
+    unidad: {
+      labels: Object.keys(unidadCount),
+      data: Object.values(unidadCount)
+    }
+  };
+}
+
+function countBy(arr, key) {
+  const out = {};
+  arr.forEach(r => {
+    const v = (r[key] || '').trim();
+    if (v) out[v] = (out[v] || 0) + 1;
+  });
+  return out;
+}
+
+function topN(obj, n) {
+  return Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n);
+}
+
+function categorizarEtiqueta(label) {
+  if (!label) return 'Sin Etiqueta';
+  if (label.startsWith('IT')) return 'Sin Contacto (IT)';
+  if (label.includes('Prog')) return 'En Progreso';
+  if (label.startsWith('Util Pos')) return 'Positivo';
+  if (label.startsWith('Util Neg')) return 'Negativo Recuperable';
+  if (label.startsWith('No Ut')) return 'No Útil';
+  return 'Sin Etiqueta';
+}
+
+async function connectSheet() {
+  const url = document.getElementById('sheetUrl').value.trim();
+  if (!url) { showToast('Pega la URL de tu Google Sheet primero', 'error'); return; }
+
+  const sheetId = extractSheetId(url);
+  if (!sheetId) { showToast('URL no válida. Verifica que sea una URL de Google Sheets', 'error'); return; }
+
+  setStatus('loading', 'Conectando...');
+
+  const SHEETS = {
+    transferencias: 'TRANSFERENCIAS',
+    amarillos: 'AMARILLOS',
+    nuevaCarreras: 'NUEVA CARRERAS'
+  };
+
+  try {
+    const raw = {};
+    for (const [key, name] of Object.entries(SHEETS)) {
+      const csvUrl = buildCsvUrl(sheetId, name);
+      const resp = await fetch(csvUrl);
+      if (!resp.ok) throw new Error(`No se pudo leer la hoja "${name}". Verifica que la hoja sea pública.`);
+      const csv = await resp.text();
+      raw[key] = parseSheetCsv(csv);
+    }
+
+    const metrics = processFromRawData(raw);
+    renderDashboard(metrics);
+    setStatus('ok', `Conectado · ${new Date().toLocaleTimeString('es-PE')}`);
+    showToast(`✅ Datos actualizados · ${raw.transferencias.length} transferencias cargadas`, 'success');
+  } catch (err) {
+    setStatus('err', 'Error de conexión');
+    showToast(`❌ ${err.message}`, 'error');
+    console.error(err);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════ */
+function loadDemoData() {
+  renderDashboard(DEMO);
+  setStatus('ok', 'Datos del archivo subido');
+  showToast('📊 Cargando datos del archivo Excel', 'success');
+}
+
+function setStatus(type, text) {
+  const dot = document.getElementById('sdot');
+  const txt = document.getElementById('stext');
+  dot.className = 'sdot ' + type;
+  txt.textContent = text;
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = ''; }, 3800);
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Header date
+  const now = new Date();
+  document.getElementById('headerDate').textContent = now.toLocaleDateString('es-PE', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  // Load demo on start
+  loadDemoData();
+
+  // Enter key on input
+  document.getElementById('sheetUrl').addEventListener('keydown', e => {
+    if (e.key === 'Enter') connectSheet();
+  });
+});
+</script>
+</body>
+</html>
